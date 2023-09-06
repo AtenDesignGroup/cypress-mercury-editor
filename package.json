@@ -3,6 +3,14 @@
   "version": "0.0.2",
   "description": "Cypress test commands for Mercury Editor.",
   "main": "src/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AtenDesignGroup/cypress-mercury-editor"
+  },
+  "keywords": [
+    "cypress",
+    "mercury-editor"
+  ],
   "scripts": {},
   "author": "Aten Design Group",
   "license": "MIT",
