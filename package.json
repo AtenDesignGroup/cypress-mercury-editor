@@ -4,18 +4,7 @@
   "description": "Cypress test commands for Mercury Editor.",
   "main": "src/index.js",
   "scripts": {},
-  "authors": [
-    {
-      "name": "Justin Toupin",
-      "email": "justin@atendesigngroup.com",
-      "url": "https://atendesigngroup.com"
-    },
-    {
-      "name": "John Ferris",
-      "email": "john@atendesigngroup.com",
-      "url": "https://atendesigngroup.com"
-    }
-  ],
+  "author": "Aten Design Group",
   "license": "MIT",
   "dependencies": {
     "cypress-iframe": "^1.0.1"
