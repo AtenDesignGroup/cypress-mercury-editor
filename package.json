@@ -1,6 +1,6 @@
 {
   "name": "cypress-mercury-editor",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Cypress test commands for Mercury Editor.",
   "main": "src/index.js",
   "scripts": {},
