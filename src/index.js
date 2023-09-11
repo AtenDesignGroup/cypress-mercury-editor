@@ -1,7 +1,20 @@
 import 'cypress-iframe';
 
 /**
- * Adds a section.
+ * Opens the "Add component" dialog for a layout enabled paragraph component.
+ *
+ * @param {string} type
+ *  The machine name of layout enabled paragraph type. Example: `section`.
+ * @param {object} options
+ *  Options for the component. If ommitted, the component will be added in the first available location.
+ * @param {string} options.section
+ *  The CSS selector for an existing section to add the component to. Used in conjunction with `options.region`.
+ * @param {string} options.region
+ *  The machine name of the region to add the component to. Used in conjunction with `options.section`.
+ * @param {string} options.before
+ *  The CSS selector for an existing component to add the new component before.
+ * @param {string} options.after
+ *  The CSS selector for an existing component to add the new component after.
  */
 Cypress.Commands.add('meAddComponent', (type, options = {}) => {
   cy.get('#me-preview').its('0.contentDocument').then((document) => {
@@ -21,7 +34,10 @@ Cypress.Commands.add('meAddComponent', (type, options = {}) => {
 });
 
 /**
- * Chooses a layout.
+ * Chooses a layout from a list of options when a layout edit form is open.
+ *
+ * @param {string} layoutId
+ *   The machine name of the layout to choose.
  */
 Cypress.Commands.add('meChooseLayout', (layoutId) => {
   cy.intercept('POST', '/mercury-editor/**').as('getLayouts');
@@ -31,7 +47,7 @@ Cypress.Commands.add('meChooseLayout', (layoutId) => {
 });
 
 /**
- * Saves a component.
+ * Clicks the save button on an open add or edit component dialog.
  */
 Cypress.Commands.add('meSaveComponent', () => {
   cy.get('#me-preview').its('0.contentDocument').then((document) => {
@@ -58,7 +74,12 @@ Cypress.Commands.add('meSaveComponent', () => {
 });
 
 /**
- * Sets the value of a CKEditor Field.
+ * Sets the value of a CKEditor5 Field.
+ *
+ * @param {string} fieldName
+ *   The machine name of the field containing a CKEditor5 widget.
+ * @param {string} value
+ *   The text or html value to set within the CKEditor5 field widget.
  */
 Cypress.Commands.add('meSetCKEditor5Value', (fieldName, value) => {
   const selector = `.field--name-field-${fieldName.replace(/_/g, '-')}`;
@@ -71,7 +92,7 @@ Cypress.Commands.add('meSetCKEditor5Value', (fieldName, value) => {
 });
 
 /**
- * Edits the current page.
+ * Visit the Mercury Editor interface by clicking the "Edit" link on a entity view page.
  */
 Cypress.Commands.add('meEditPage', () => {
   cy.get('a.me-edit-screen-toggle').click();
@@ -79,7 +100,7 @@ Cypress.Commands.add('meEditPage', () => {
 });
 
 /**
- * Saves the page.
+ * Saves the entity by clicking the `Save` button in the Mercury Editor interface.
  */
 Cypress.Commands.add('meSavePage', () => {
   cy.intercept('POST', '/mercury-editor/**').as('savePage');
@@ -87,13 +108,17 @@ Cypress.Commands.add('meSavePage', () => {
   cy.wait('@savePage');
 });
 
+/**
+ * Deletes the entity by clicking the `Delete` button in the Mercury Editor interface.
+ * This will open a confirmation dialog, and then delete the entity.
+ */
 Cypress.Commands.add('meDeletePage', () => {
   cy.get('a').contains('Delete').click();
   cy.get('.button--primary:visible').contains('Delete').click();
 });
 
 /**
- * Exit the editor.
+ * Exit the editor by clicking the done button.
  */
 Cypress.Commands.add('meExitEditor', () => {
   cy.get('#me-done-btn').click();
@@ -102,6 +127,9 @@ Cypress.Commands.add('meExitEditor', () => {
 
 /**
  * Find a component that contains the given text.
+ *
+ * @param {string} text
+ *   The text to search for within the component.
  */
 Cypress.Commands.add('meFindComponent', (text) => {
   cy.get('#me-preview').its('0.contentDocument').then((document) => {
@@ -110,11 +138,24 @@ Cypress.Commands.add('meFindComponent', (text) => {
   });
 });
 
+/**
+ * Open the edit component dialog by clicking the edit button on an existing paragraph.
+ *
+ * @param {string|alias} component
+ *  The CSS selector or cypress alias for the component to edit.
+ *
+ */
 Cypress.Commands.add('meEditComponent', (component) => {
   cy.get(component).find('.lpb-edit').click();
   cy.get('mercury-dialog.lpb-dialog');
 });
 
+/**
+ * Delete a component by clicking the delete button on an existing paragraph.
+ *
+ * @param {string|alias} component
+ *  The CSS selector or cypress alias for the component to edit.
+ */
 Cypress.Commands.add('meDeleteComponent', (component) => {
   cy.get(component).find('.lpb-delete').click();
   cy.get('mercury-dialog.lpb-dialog');
