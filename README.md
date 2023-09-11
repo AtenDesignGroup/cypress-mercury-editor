@@ -1,6 +1,3 @@
-# cypress-mercury-editor
-Cypress commands for Mercury Editor
-
 # Mercury Editor Cypress Commands
 
 This repository contains a set of [Cypress](https://www.cypress.io/) commands designed to interact with Drupal's [Mercury Editor](https://www.drupal.org/project/mercury_editor) module. These commands allow you to automate various tasks when working with the Mercury Editor, such as adding components, choosing layouts, editing content, and more.
