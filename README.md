@@ -229,6 +229,3 @@ it('creates, edits, and deletes a node with Mercury Editor', () => {
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
-```
-
-You can copy and paste this Markdown code into a `README.md` file in your project for clear documentation.
