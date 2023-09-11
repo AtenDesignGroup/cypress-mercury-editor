@@ -97,6 +97,7 @@ Cypress.Commands.add('meDeletePage', () => {
  */
 Cypress.Commands.add('meExitEditor', () => {
   cy.get('#me-done-btn').click();
+  cy.url();
 });
 
 /**
