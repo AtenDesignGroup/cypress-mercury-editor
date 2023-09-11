@@ -138,25 +138,95 @@ To use these Cypress commands in your tests, simply import them and call the des
 import 'cypress-iframe';
 
 // Import the Mercury Editor Cypress commands
-import './path/to/me-cypress-commands';
+import 'cypress-mercury-editor';
 
-// Use the commands in your Cypress tests
-describe('My Mercury Editor Tests', () => {
-  it('should add a component', () => {
-    // Add a component with specific options
-    cy.meAddComponent('section', {
-      section: '.my-section',
-      region: 'main',
+it('creates, edits, and deletes a node with Mercury Editor', () => {
+    // Create a new page.
+    cy.visit('/node/add/me_test_ct');
+    cy.get('#edit-title-0-value').clear().type('-- Test page --');
+    // Tests that syncing the title field works.
+    cy.get('input[name="title[0][value]"]').clear().type('-- Test page --');
+    cy.iframe('#me-preview').find('.page-title').contains(' -- Test page --');
+
+    cy.meAddComponent('me_test_section');
+    cy.meChooseLayout('layout_twocol');
+    cy.meSaveComponent().then((section) => {
+      cy.meAddComponent('me_test_text', {
+        region: 'first',
+        section
+      });
+      cy.meSetCKEditor5Value('me_test_text', 'Left');
+      cy.meSaveComponent().then((component) => {
+        cy.wrap(component).should('contain', 'Left');
+      });
+
+      cy.meAddComponent('me_test_text', {
+        region: 'second',
+        section
+      });
+      cy.meSetCKEditor5Value('me_test_text', 'Right');
+      cy.meSaveComponent().then((component) => {
+        cy.wrap(component).should('contain', 'Right');
+      });
+    });
+
+    cy.meSavePage();
+    cy.meExitEditor();
+
+    cy.meEditPage();
+    cy.meFindComponent('Left').then((component) => {
+      cy.meEditComponent(component);
+      cy.meSetCKEditor5Value('me_test_text', 'Left - edited');
+      cy.meSaveComponent().then((component) => {
+        cy.wrap(component).should('contain', 'Left - edited');
+      });
+    });
+
+    cy.meFindComponent('Right').then((component) => {
+      cy.meEditComponent(component);
+      cy.meSetCKEditor5Value('me_test_text', 'Right - edited');
+      cy.meSaveComponent().then((component) => {
+        cy.wrap(component).should('contain', 'Right - edited');
+      });
+    });
+
+    cy.iframe('#me-preview').find('[data-type="me_test_section"]').first().then((section) => {
+      cy.meAddComponent('me_test_section', { after: section });
+      cy.meChooseLayout('layout_threecol_33_34_33');
+      cy.meSaveComponent().then((section) => {
+
+        cy.meAddComponent('me_test_text', {
+          region: 'first',
+          section
+        });
+        cy.meSetCKEditor5Value('me_test_text', 'Bottom left');
+        cy.meSaveComponent().then((component) => {
+          cy.wrap(component).should('contain', 'Bottom left');
+        });
+
+        cy.meAddComponent('me_test_text', {
+          region: 'second',
+          section
+        });
+        cy.meSetCKEditor5Value('me_test_text', 'Bottom center');
+        cy.meSaveComponent().then((component) => {
+          cy.wrap(component).should('contain', 'Bottom center');
+        });;
+
+        cy.meAddComponent('me_test_text', {
+          region: 'third',
+          section
+        });
+        cy.meSetCKEditor5Value('me_test_text', 'Bottom right');
+        cy.meSaveComponent().then((component) => {
+          cy.wrap(component).should('contain', 'Bottom right');
+        });;
+      });
+      cy.meSavePage();
+      cy.meExitEditor();
+      cy.meDeletePage();
     });
   });
-
-  it('should edit a component', () => {
-    // Edit an existing component
-    cy.meEditComponent('.my-component');
-  });
-
-  // Add more tests using other Mercury Editor commands
-});
 ```
 
 ## License
