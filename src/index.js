@@ -82,7 +82,7 @@ Cypress.Commands.add('meSaveComponent', () => {
  *   The text or html value to set within the CKEditor5 field widget.
  */
 Cypress.Commands.add('meSetCKEditor5Value', (fieldName, value) => {
-  const selector = `.field--name-field-${fieldName.replace(/_/g, '-')}`;
+  const selector = `.field--name-${fieldName.replace(/_/g, '-')}`;
   cy.get(`${selector} .ck-content[contenteditable=true]`).then(el => {
     const editor = el[0].ckeditorInstance;
     console.log(el, editor);
