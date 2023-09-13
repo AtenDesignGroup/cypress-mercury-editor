@@ -104,6 +104,11 @@ Cypress.Commands.add('meEditPage', () => {
  */
 Cypress.Commands.add('meSavePage', () => {
   cy.intercept('POST', '/mercury-editor/**').as('savePage');
+  cy.intercept({
+    method: 'POST',
+    pathname: '/mercury-editor/**',
+    times: 1
+  }).as('savePage');
   cy.get('#me-save-btn').click();
   cy.wait('@savePage');
 });
