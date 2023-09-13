@@ -103,7 +103,6 @@ Cypress.Commands.add('meEditPage', () => {
  * Saves the entity by clicking the `Save` button in the Mercury Editor interface.
  */
 Cypress.Commands.add('meSavePage', () => {
-  cy.intercept('POST', '/mercury-editor/**').as('savePage');
   cy.intercept({
     method: 'POST',
     pathname: '/mercury-editor/**',
