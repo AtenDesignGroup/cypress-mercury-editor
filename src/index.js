@@ -95,7 +95,7 @@ Cypress.Commands.add('meSetCKEditor5Value', (fieldName, value) => {
  * Visit the Mercury Editor interface by clicking the "Edit" link on a entity view page.
  */
 Cypress.Commands.add('meEditPage', () => {
-  cy.get('a.me-edit-screen-toggle').click();
+  cy.get('.tabs--primary a').contains('Edit').click();
   cy.get('#me-preview').its('0.contentDocument');
 });
 
