@@ -63,9 +63,10 @@ Cypress.Commands.add('meSaveComponent', () => {
       const uuid = action == 'edit' ? parts.pop() : null;
       cy.get('.me-dialog__buttonpane .lpb-btn--save').click();
       cy.wait('@saveComponent').then(() => {
-        cy.wait(500).then(() => {
+        cy.wait(200).then(() => {
           const uuids2 = Array.from(document.querySelectorAll('[data-uuid]')).map(el => el.getAttribute('data-uuid'));
           const newUuid = uuids2.filter(uuid => !uuids.includes(uuid)).pop();
+          console.log(uuids, uuids2, newUuid);
           cy.get(document).find(`[data-uuid="${uuid || newUuid}"]`);
         });
       });
@@ -132,14 +133,23 @@ Cypress.Commands.add('meExitEditor', () => {
 /**
  * Find a component that contains the given text.
  *
- * @param {string} text
- *   The text to search for within the component.
+ * @param {string|int} expression
+ *   Either The text to search for within the component or the numeric
+ *   index of the component to return.
  */
-Cypress.Commands.add('meFindComponent', (text) => {
-  cy.get('#me-preview').its('0.contentDocument').then((document) => {
-    const component = Array.from(document.querySelectorAll('[data-uuid]')).filter(el => el.textContent.includes(text)).pop();
-    cy.wrap(component);
-  });
+Cypress.Commands.add('meFindComponent', (expression) => {
+  if (typeof expression === 'number') {
+    cy.get('#me-preview').its('0.contentDocument').then((document) => {
+      const component = Array.from(document.querySelectorAll('[data-uuid]'))[expression - 1];
+      cy.wrap(component);
+    });
+  }
+  else if (typeof expression === 'string') {
+    cy.get('#me-preview').its('0.contentDocument').then((document) => {
+      const component = Array.from(document.querySelectorAll('[data-uuid]')).filter(el => el.textContent.includes(expression)).pop();
+      cy.wrap(component);
+    });
+  }
 });
 
 /**
