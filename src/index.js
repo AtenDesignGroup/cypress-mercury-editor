@@ -17,6 +17,11 @@ import 'cypress-iframe';
  *  The CSS selector for an existing component to add the new component after.
  */
 Cypress.Commands.add('meAddComponent', (type, options = {}) => {
+  cy.intercept({
+    method: 'POST',
+    pathname: '/mercury-editor/**',
+    times: 1
+  }).as('saveComponent');
   cy.get('#me-preview').its('0.contentDocument').then((document) => {
     if (options.section && options.region) {
       cy.get(options.section).find(`[data-region="${options.region}"]`).find('.lpb-btn--add').click();
@@ -27,6 +32,7 @@ Cypress.Commands.add('meAddComponent', (type, options = {}) => {
     } else {
       cy.wrap(document).find('.lpb-btn--add').first().click();
     }
+    cy.wait('@saveComponent');
     cy.get('.lpb-component-list');
     cy.get(`.type-${type} a`).click();
     cy.get('mercury-dialog.lpb-dialog');
@@ -40,7 +46,11 @@ Cypress.Commands.add('meAddComponent', (type, options = {}) => {
  *   The machine name of the layout to choose.
  */
 Cypress.Commands.add('meChooseLayout', (layoutId) => {
-  cy.intercept('POST', '/mercury-editor/**').as('getLayouts');
+  cy.intercept({
+    method: 'POST',
+    pathname: '/mercury-editor/**',
+    times: 1
+  }).as('getLayouts');
   cy.get(`input[value="${layoutId}"] + label`).click();
   cy.wait('@getLayouts');
   cy.get('mercury-dialog.lpb-dialog');
@@ -50,26 +60,20 @@ Cypress.Commands.add('meChooseLayout', (layoutId) => {
  * Clicks the save button on an open add or edit component dialog.
  */
 Cypress.Commands.add('meSaveComponent', () => {
-  cy.get('#me-preview').its('0.contentDocument').then((document) => {
-    const uuids = Array.from(document.querySelectorAll('[data-uuid]')).map(el => el.getAttribute('data-uuid'));
-    cy.intercept({
-      method: 'POST',
-      pathname: '/mercury-editor/**',
-      times: 1
-    }).as('saveComponent');
-    cy.get('mercury-dialog.lpb-dialog form').then((form) => {
-      const parts = form.attr('action').split('/');
-      const action = parts[parts.length - 2];
-      const uuid = action == 'edit' ? parts.pop() : null;
-      cy.get('.me-dialog__buttonpane .lpb-btn--save').click();
-      cy.wait('@saveComponent').then(() => {
-        cy.wait(200).then(() => {
-          const uuids2 = Array.from(document.querySelectorAll('[data-uuid]')).map(el => el.getAttribute('data-uuid'));
-          const newUuid = uuids2.filter(uuid => !uuids.includes(uuid)).pop();
-          console.log(uuids, uuids2, newUuid);
-          cy.get(document).find(`[data-uuid="${uuid || newUuid}"]`);
-        });
-      });
+  cy.intercept({
+    method: 'POST',
+    pathname: '/mercury-editor/**',
+    times: 1
+  }).as('saveComponent');
+  cy.iframe('#me-preview').find('.lp-builder').then($layout => {
+    const uuids = Array.from($layout[0].querySelectorAll('[data-uuid]')).map(el => el.getAttribute('data-uuid'));
+    cy.get('.me-dialog__buttonpane .lpb-btn--save').click();
+    cy.wait('@saveComponent').then((xhr) => {
+      const meCommand = xhr.response.body.find(command => command.command === 'mercuryEditorEditIframeCommandsWrapper');
+      const insertCommand = (meCommand.commands || []).find(command => command.command === 'insert');
+      const newUuids = Cypress.$(`<div>${insertCommand.data}</div>`).find('[data-uuid]').toArray().map(el => el.getAttribute('data-uuid'));
+      const addedUuids = newUuids.filter(uuid => !uuids.includes(uuid)).map(uuid => `[data-uuid="${uuid}"]`).join(', ');
+      cy.iframe('#me-preview').find(addedUuids);
     });
   });
 });
@@ -86,7 +90,6 @@ Cypress.Commands.add('meSetCKEditor5Value', (fieldName, value) => {
   const selector = `.field--name-${fieldName.replace(/_/g, '-')}`;
   cy.get(`${selector} .ck-content[contenteditable=true]`).then(el => {
     const editor = el[0].ckeditorInstance;
-    console.log(el, editor);
     editor.setData(value);
   });
   cy.wait(500);
