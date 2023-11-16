@@ -66,14 +66,25 @@ Cypress.Commands.add('meSaveComponent', () => {
     times: 1
   }).as('saveComponent');
   cy.iframe('#me-preview').find('.lp-builder').then($layout => {
+    const formAction = Cypress.$('form.layout-paragraphs-component-form').attr('action');
+    const parts = formAction.split('/');
+    const subject = parts.pop();
+    const action = parts.pop();
     const uuids = Array.from($layout[0].querySelectorAll('[data-uuid]')).map(el => el.getAttribute('data-uuid'));
+
     cy.get('.me-dialog__buttonpane .lpb-btn--save').click();
     cy.wait('@saveComponent').then((xhr) => {
-      const meCommand = xhr.response.body.find(command => command.command === 'mercuryEditorEditIframeCommandsWrapper');
-      const insertCommand = (meCommand.commands || []).find(command => command.command === 'insert');
-      const newUuids = Cypress.$(`<div>${insertCommand.data}</div>`).find('[data-uuid]').toArray().map(el => el.getAttribute('data-uuid'));
-      const addedUuids = newUuids.filter(uuid => !uuids.includes(uuid)).map(uuid => `[data-uuid="${uuid}"]`).join(', ');
-      cy.iframe('#me-preview').find(addedUuids);
+      let selector = '';
+      if (action == 'edit') {
+        selector = `[data-uuid="${subject}"]`;
+      }
+      else {
+        const meCommand = xhr.response.body.find(command => command.command === 'mercuryEditorEditIframeCommandsWrapper');
+        const insertCommand = (meCommand.commands || []).find(command => command.command === 'insert');
+        const affectedUuids = Cypress.$(`<div>${insertCommand.data}</div>`).find('[data-uuid]').toArray().map(el => el.getAttribute('data-uuid'));
+        selector = affectedUuids.filter(uuid => !uuids.includes(uuid)).map(uuid => `[data-uuid="${uuid}"]`).join(', ');
+      }
+      cy.iframe('#me-preview').find(selector).should('exist');
     });
   });
 });
