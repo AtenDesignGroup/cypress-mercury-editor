@@ -84,7 +84,7 @@ Cypress.Commands.add('meSaveComponent', () => {
         const affectedUuids = Cypress.$(`<div>${insertCommand.data}</div>`).find('[data-uuid]').toArray().map(el => el.getAttribute('data-uuid'));
         selector = affectedUuids.filter(uuid => !uuids.includes(uuid)).map(uuid => `[data-uuid="${uuid}"]`).join(', ');
       }
-      cy.iframe('#me-preview').find(selector);
+      return cy.iframe('#me-preview').find(selector);
     });
   });
 });
