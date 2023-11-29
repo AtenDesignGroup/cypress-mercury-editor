@@ -71,7 +71,6 @@ Cypress.Commands.add('meSaveComponent', () => {
     const subject = parts.pop();
     const action = parts.pop();
     const uuids = Array.from($layout[0].querySelectorAll('[data-uuid]')).map(el => el.getAttribute('data-uuid'));
-
     cy.get('.me-dialog__buttonpane .lpb-btn--save').click();
     cy.wait('@saveComponent').then((xhr) => {
       let selector = '';
@@ -84,7 +83,9 @@ Cypress.Commands.add('meSaveComponent', () => {
         const affectedUuids = Cypress.$(`<div>${insertCommand.data}</div>`).find('[data-uuid]').toArray().map(el => el.getAttribute('data-uuid'));
         selector = affectedUuids.filter(uuid => !uuids.includes(uuid)).map(uuid => `[data-uuid="${uuid}"]`).join(', ');
       }
-      return cy.iframe('#me-preview').find(selector);
+      // Give the DOM a moment to update.
+      cy.wait(500);
+      cy.iframe('#me-preview').find(selector, { timeout: 10000 });
     });
   });
 });
@@ -99,7 +100,7 @@ Cypress.Commands.add('meSaveComponent', () => {
  */
 Cypress.Commands.add('meSetCKEditor5Value', (fieldName, value) => {
   const selector = `.field--name-${fieldName.replace(/_/g, '-')}`;
-  cy.get(`${selector} .ck-content[contenteditable=true]`).then(el => {
+  cy.get(`${selector} .ck-content[contenteditable=true]`, {timeout: 10000}).then(el => {
     const editor = el[0].ckeditorInstance;
     editor.setData(value);
   });
@@ -174,7 +175,13 @@ Cypress.Commands.add('meFindComponent', (expression) => {
  *
  */
 Cypress.Commands.add('meEditComponent', (component) => {
+  cy.intercept({
+    method: 'POST',
+    pathname: '/mercury-editor/**',
+    times: 1
+  }).as('openEditForm');
   cy.get(component).find('.lpb-edit').click();
+  cy.wait('@openEditForm');
   cy.get('mercury-dialog.lpb-dialog');
 });
 
