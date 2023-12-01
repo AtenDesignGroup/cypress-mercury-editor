@@ -126,6 +126,8 @@ Cypress.Commands.add('meSavePage', () => {
   }).as('savePage');
   cy.get('#me-save-btn').click();
   cy.wait('@savePage');
+  // Give the DOM a moment to update.
+  cy.wait(200);
 });
 
 /**
