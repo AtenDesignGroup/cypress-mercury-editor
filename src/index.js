@@ -19,7 +19,7 @@ import 'cypress-iframe';
 Cypress.Commands.add('meAddComponent', (type, options = {}) => {
   cy.intercept({
     method: 'POST',
-    pathname: '/mercury-editor/**',
+    pathname: /^(\/[a-z-]*)?\/mercury-editor\/(.*)/,
     times: 1
   }).as('saveComponent');
   cy.get('#me-preview').its('0.contentDocument').then((document) => {
@@ -48,7 +48,7 @@ Cypress.Commands.add('meAddComponent', (type, options = {}) => {
 Cypress.Commands.add('meChooseLayout', (layoutId) => {
   cy.intercept({
     method: 'POST',
-    pathname: '/mercury-editor/**',
+    pathname: /^(\/[a-z-]*)?\/mercury-editor\/(.*)/,
     times: 1
   }).as('getLayouts');
   cy.get(`input[value="${layoutId}"] + label`).click();
@@ -62,7 +62,7 @@ Cypress.Commands.add('meChooseLayout', (layoutId) => {
 Cypress.Commands.add('meSaveComponent', () => {
   cy.intercept({
     method: 'POST',
-    pathname: '/mercury-editor/**',
+    pathname: /^(\/[a-z-]*)?\/mercury-editor\/(.*)/,
     times: 1
   }).as('saveComponent');
   cy.iframe('#me-preview').find('.lp-builder').then($layout => {
@@ -121,7 +121,7 @@ Cypress.Commands.add('meEditPage', () => {
 Cypress.Commands.add('meSavePage', () => {
   cy.intercept({
     method: 'POST',
-    pathname: '/mercury-editor/**',
+    pathname: /^(\/[a-z-]*)?\/mercury-editor\/(.*)/,
     times: 1
   }).as('savePage');
   cy.get('#me-save-btn').click();
@@ -179,7 +179,7 @@ Cypress.Commands.add('meFindComponent', (expression) => {
 Cypress.Commands.add('meEditComponent', (component) => {
   cy.intercept({
     method: 'POST',
-    pathname: '/mercury-editor/**',
+    pathname: /^(\/[a-z-]*)?\/mercury-editor\/(.*)/,
     times: 1
   }).as('openEditForm');
   cy.get(component).find('.lpb-edit').click();
