@@ -194,7 +194,7 @@ Cypress.Commands.add('meEditComponent', (component) => {
  *  The CSS selector or cypress alias for the component to edit.
  */
 Cypress.Commands.add('meDeleteComponent', (component) => {
-  cy.get(component).find('.lpb-delete').click();
+  cy.get(component).find('.lpb-delete').first().click();
   cy.get('mercury-dialog.lpb-dialog');
-  cy.get('.me-dialog__buttonpane .lpb-btn--delete').click();
+  cy.get('.me-dialog__buttonpane .lpb-btn--confirm-delete').click();
 });
