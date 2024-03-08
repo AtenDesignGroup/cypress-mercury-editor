@@ -182,6 +182,7 @@ Cypress.Commands.add('meEditComponent', (component) => {
     pathname: /^(\/[a-z-]*)?\/mercury-editor\/(.*)/,
     times: 1
   }).as('openEditForm');
+  cy.get(component).find('.lpb-drag').focus();
   cy.get(component).find('.lpb-edit').click();
   cy.wait('@openEditForm');
   cy.get('mercury-dialog.lpb-dialog');
