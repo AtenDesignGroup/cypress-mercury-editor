@@ -67,7 +67,7 @@ Cypress.Commands.add('meSaveComponent', () => {
   }).as('saveComponent');
   cy.iframe('#me-preview').find('.lp-builder').then($layout => {
     const formAction = Cypress.$('form.layout-paragraphs-component-form').attr('action');
-    const parts = formAction.split('/');
+    const parts = formAction.split('?')[0].split('/');
     const subject = parts.pop();
     const action = parts.pop();
     const uuids = Array.from($layout[0].querySelectorAll('[data-uuid]')).map(el => el.getAttribute('data-uuid'));
