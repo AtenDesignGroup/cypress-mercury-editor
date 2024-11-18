@@ -35,7 +35,7 @@ Cypress.Commands.add('meAddComponent', (type, options = {}) => {
     cy.wait('@saveComponent');
     cy.get('.lpb-component-list');
     cy.get(`.type-${type} a`).click();
-    cy.get('mercury-dialog.lpb-dialog');
+    cy.get('mercury-dialog[id^=lpb-dialog-]');
   });
 });
 
@@ -53,7 +53,7 @@ Cypress.Commands.add('meChooseLayout', (layoutId) => {
   }).as('getLayouts');
   cy.get(`input[value="${layoutId}"] + label`).click();
   cy.wait('@getLayouts');
-  cy.get('mercury-dialog.lpb-dialog');
+  cy.get('mercury-dialog[id^=lpb-dialog-]');
 });
 
 /**
@@ -185,7 +185,7 @@ Cypress.Commands.add('meEditComponent', (component) => {
   cy.get(component).find('.lpb-drag').focus();
   cy.get(component).find('.lpb-edit').click();
   cy.wait('@openEditForm');
-  cy.get('mercury-dialog.lpb-dialog');
+  cy.get('mercury-dialog[id^=lpb-dialog-]');
 });
 
 /**
@@ -197,6 +197,6 @@ Cypress.Commands.add('meEditComponent', (component) => {
 Cypress.Commands.add('meDeleteComponent', (component) => {
   cy.get(component).find('.lpb-drag').first().focus();
   cy.get(component).find('.lpb-delete').first().click();
-  cy.get('mercury-dialog.lpb-dialog');
+  cy.get('mercury-dialog[id^=lpb-dialog-]');
   cy.get('.me-dialog__buttonpane .lpb-btn--confirm-delete').click();
 });
