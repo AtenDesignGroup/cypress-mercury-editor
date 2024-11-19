@@ -74,7 +74,11 @@ Cypress.Commands.add('meSaveComponent', () => {
     cy.get('.me-dialog__buttonpane .lpb-btn--save').click();
     cy.wait('@saveComponent').then((xhr) => {
       let selector = '';
-      if (action == 'edit') {
+      if (cy.get('.form-element.error')) {
+        cy.get('.form-element.error').first();
+        return;
+      }
+      else if (action == 'edit') {
         selector = `[data-uuid="${subject}"]`;
       }
       else {
