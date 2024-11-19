@@ -73,23 +73,45 @@ Cypress.Commands.add('meSaveComponent', () => {
     const uuids = Array.from($layout[0].querySelectorAll('[data-uuid]')).map(el => el.getAttribute('data-uuid'));
     cy.get('.me-dialog__buttonpane .lpb-btn--save').click();
     cy.wait('@saveComponent').then((xhr) => {
+
       let selector = '';
-      if (cy.get('.form-element.error')) {
-        cy.get('.form-element.error').first();
-        return;
-      }
-      else if (action == 'edit') {
-        selector = `[data-uuid="${subject}"]`;
+
+      // Check if there's an error in the form elements within the insert command
+      const errorCommand = xhr.response.body.find(command => command.command === 'insert' && Cypress.$(`<div>${command.data}</div>`).find('.form-element.error').length);
+
+      if (errorCommand) {
+        selector = '.form-element.error';
+
+        cy.wait(500);
+        cy.get(selector, { timeout: 10000 });
       }
       else {
-        const meCommand = xhr.response.body.find(command => command.command === 'mercuryEditorEditIframeCommandsWrapper');
-        const insertCommand = (meCommand.commands || []).find(command => command.command === 'insert');
-        const affectedUuids = Cypress.$(`<div>${insertCommand.data}</div>`).find('[data-uuid]').toArray().map(el => el.getAttribute('data-uuid'));
-        selector = affectedUuids.filter(uuid => !uuids.includes(uuid)).map(uuid => `[data-uuid="${uuid}"]`).join(', ');
+        if (action === 'edit') {
+          selector = `[data-uuid="${subject}"]`;
+        } else {
+          const mercuryEditorCommand = xhr.response.body.find(command => command.command === 'mercuryEditorEditIframeCommandsWrapper');
+
+          if (mercuryEditorCommand) {
+            const insertCommandData = mercuryEditorCommand.commands?.find(command => command.command === 'insert');
+
+            if (insertCommandData) {
+              const affectedUuids = Cypress.$(`<div>${insertCommandData.data}</div>`)
+                .find('[data-uuid]')
+                .toArray()
+                .map(el => el.getAttribute('data-uuid'));
+
+              selector = affectedUuids
+                .filter(uuid => !uuids.includes(uuid))
+                .map(uuid => `[data-uuid="${uuid}"]`)
+                .join(', ');
+            }
+          }
+        }
+
+        // Wait for DOM update and find the selector within the iframe
+        cy.wait(500);
+        cy.iframe('#me-preview').find(selector, { timeout: 10000 });
       }
-      // Give the DOM a moment to update.
-      cy.wait(500);
-      cy.iframe('#me-preview').find(selector, { timeout: 10000 });
     });
   });
 });
