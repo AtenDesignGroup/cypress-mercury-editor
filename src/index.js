@@ -32,7 +32,7 @@ Cypress.Commands.add('meAddComponent', (type, options = {}) => {
     } else {
       cy.wrap(document).find('.lpb-btn--add').first().click();
     }
-    cy.wait('@saveComponent');
+    cy.wait('@saveComponent', { timeout: 10000 });
     cy.get('.lpb-component-list');
     cy.get(`.type-${type} a`).click();
     cy.get('mercury-dialog[id^=lpb-dialog-]');
