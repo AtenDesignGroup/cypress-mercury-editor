@@ -6,11 +6,19 @@ This repository contains a set of [Cypress](https://www.cypress.io/) commands de
 
 To use these Cypress commands in your project, follow these installation steps:
 
-1. **Install the commands**: This assumes you already have Cypress installed and running:
+1. **Install the commands**: This assumes you already have Cypress installed and running. Choose the appropriate version based on the version of the `mercury_editor` Drupal module you are using:
 
-   ```bash
-   npm install cypress-mercury-editor --save-dev
-   ```
+   - For `mercury_editor` 2.x, install version 2 of `cypress-mercury-editor`:
+
+     ```bash
+     npm install cypress-mercury-editor@2 --save-dev
+     ```
+
+   - For `mercury_editor` 3.x, install version 3 of `cypress-mercury-editor`:
+
+     ```bash
+     npm install cypress-mercury-editor@3 --save-dev
+     ```
 
 4. **Use in Tests**: You can now use these commands in your Cypress tests by importing them in individual tests or globally inside your /support/commands.js file:
 
