@@ -1,7 +1,38 @@
 import 'cypress-iframe';
 
 /**
- * Opens the "Add component" dialog for a layout enabled paragraph component.
+ * Checks if the given form has auto-save enabled.
+ * Returns a promise that resolves with an object containing:
+ * - `autoSave`: boolean indicating if auto-save is enabled.
+ * - `data`: the serialized data if auto-save is enabled, otherwise null.
+ * - `$form`: the jQuery object of the form.
+ */
+Cypress.Commands.add('meCheckForAutoSave', (form) => {
+  return cy.get(form, { log: false }).then(($form) => {
+    const formEl = $form[0];
+    return new Cypress.Promise((resolve, reject) => {
+      const start = Date.now();
+      const interval = 50;
+
+      const check = () => {
+        if (!formEl.querySelector('.me-autosave-btn')) {
+          resolve({autoSave: false, data: null, $form});
+        } else if (formEl.serializedData) {
+          resolve({autoSave: true, data: formEl.serializedData, $form});
+        } else if (Date.now() - start >= 500) {
+          resolve({autoSave: false, data: null, $form});
+        } else {
+          setTimeout(check, interval);
+        }
+      };
+
+      check();
+    });
+  });
+});
+
+/**
+ * Opens the "Add component" sidebar for a layout enabled paragraph component.
  *
  * @param {string} type
  *  The machine name of layout enabled paragraph type. Example: `section`.
@@ -17,25 +48,66 @@ import 'cypress-iframe';
  *  The CSS selector for an existing component to add the new component after.
  */
 Cypress.Commands.add('meAddComponent', (type, options = {}) => {
-  cy.intercept({
-    method: 'POST',
-    pathname: /^(\/[a-z-]*)?\/mercury-editor\/(.*)/,
-    times: 1
-  }).as('saveComponent');
+
+  if (options.section && options.section.attr('data-active') !== 'true') {
+    throw new Error('The section option must be current the active component.');
+  }
+
   cy.get('#me-preview').its('0.contentDocument').then((document) => {
+    let subject;
+    let selector;
     if (options.section && options.region) {
-      cy.get(options.section).find(`[data-region="${options.region}"]`).find('.lpb-btn--add').click();
+      subject = options.section;
+      selector = `[data-region="${options.region}"] .lpb-btn--add`;
     } else if (options.before) {
-      cy.get(options.before).find('> .lpb-btn--add.before').click();
+      subject = options.before;
+      selector = '> .lpb-btn--add.before';
     } else if (options.after) {
-      cy.get(options.after).find('> .lpb-btn--add.after').click();
+      subject = options.after;
+      selector = '> .lpb-btn--add.after';
     } else {
-      cy.wrap(document).find('.lpb-btn--add').first().click();
+      subject = document;
+      selector = '.lpb-btn--add';
     }
-    cy.wait('@saveComponent', { timeout: 10000 });
-    cy.get('.lpb-component-list');
+
+    cy.intercept({
+      method: 'POST',
+      pathname: new RegExp(`/mercury-editor/[a-f0-9]{32}/choose-component`),
+      times: 1,
+    }).as('componentMenu');
+    cy.get(subject).find(selector).first().click({ force: true });
+    cy.wait('@componentMenu', { timeout: 1000 });
+    cy.get('.lpb-component-list', { timeout: 1000 });
+
+    cy.intercept({
+      method: 'POST',
+      pathname: new RegExp(`/mercury-editor/[a-f0-9]{32}/insert/${type}(\\?|$)`),
+      times: 1,
+    }).as('addComponent');
     cy.get(`.type-${type} a`).click();
-    cy.get('mercury-dialog[id^=lpb-dialog-]');
+
+    // Wait for the add component request to finish.
+    // This will result in either:
+    // 1. A new component being added to the layout (skipform enabled).
+    // 2. A component form being opened (skipform disabled).
+    cy.wait('@addComponent', { timeout: 10000 }).then(({ response }) => {
+      const skipForm = !response
+        .body
+        .find(command => command.command === 'openMercuryDialog');
+      if (skipForm) {
+        cy.log('Skip form enabled, component added directly to layout.');
+        cy.intercept({
+          method: 'POST',
+          pathname: new RegExp(`/mercury-editor/[a-f0-9]{32}/edit/`),
+          times: 1,
+        }).as('editForm');
+        cy.wait('@editForm', { timeout: 10000 }).then(() => {
+          cy.get('.layout-paragraphs-component-form.me-autosave', { timeout: 1000 });
+        });
+      } else {
+        cy.get('.layout-paragraphs-component-form', { timeout: 1000 });
+      }
+    });
   });
 });
 
@@ -46,73 +118,119 @@ Cypress.Commands.add('meAddComponent', (type, options = {}) => {
  *   The machine name of the layout to choose.
  */
 Cypress.Commands.add('meChooseLayout', (layoutId) => {
-  cy.intercept({
-    method: 'POST',
-    pathname: /^(\/[a-z-]*)?\/mercury-editor\/(.*)/,
-    times: 1
-  }).as('getLayouts');
-  cy.get(`input[value="${layoutId}"] + label`).click();
-  cy.wait('@getLayouts');
-  cy.get('mercury-dialog[id^=lpb-dialog-]');
+  cy.get('.layout-paragraphs-component-form').then(($form) => {
+    const autoSave = $form.hasClass('me-autosave');
+    cy.intercept({
+      method: 'POST',
+      pathname: /^(\/[a-z-]*)?\/mercury-editor\/(.*)/,
+      times: 1
+    }).as('chooseLayout');
+    cy.get(`input[value="${layoutId}"] + label`).click();
+    cy.wait('@chooseLayout', { timeout: 10000 }).then(({ request }) => {
+      const parsed = new URLSearchParams(request.body);
+      expect(parsed.get('_triggering_element_name')).to.equal('layout_paragraphs[layout]');
+    });
+    if (autoSave) {
+      cy.log('Auto-save enabled for this component form. Waiting for auto-save to complete.');
+      cy.intercept({
+        method: 'POST',
+        pathname: new RegExp(`/mercury-editor/[a-f0-9]{32}/edit/`),
+        times: 1,
+      }).as('autoSave');
+      cy.wait('@autoSave', { timeout: 1000 }).then(() => {
+        cy.get('.layout-paragraphs-component-form').then(($form) => {
+          if ($form.find('.form-element.error').length) {
+            cy.get('.layout-paragraphs-component-form .form-element.error', { timeout: 10000 });
+            cy.log('Error in the form elements after choosing layout.');
+          } else {
+            cy.iframe('#me-preview').find(`[data-layout="${layoutId}"]`, { timeout: 1000 });
+            cy.get('.layout-paragraphs-component-form.me-autosave', { timeout: 1000 });
+          }
+        });
+      });
+    } else {
+      cy.get('.layout-paragraphs-component-form', { timeout: 1000 });
+    }
+  });
 });
 
 /**
- * Clicks the save button on an open add or edit component dialog.
+ * Saves the component form.
+ * Handles two scenarios:
+ * 1. Auto-save forms (existing components) - waits for auto-save to complete
+ * 2. Manual save forms (new components) - clicks the save button
  */
 Cypress.Commands.add('meSaveComponent', () => {
-  cy.intercept({
-    method: 'POST',
-    pathname: /^(\/[a-z-]*)?\/mercury-editor\/(.*)/,
-    times: 1
-  }).as('saveComponent');
-  cy.iframe('#me-preview').find('.lp-builder').then($layout => {
-    const formAction = Cypress.$('form.layout-paragraphs-component-form').attr('action');
-    const parts = formAction.split('?')[0].split('/');
-    const subject = parts.pop();
-    const action = parts.pop();
-    const uuids = Array.from($layout[0].querySelectorAll('[data-uuid]')).map(el => el.getAttribute('data-uuid'));
-    cy.get('.me-dialog__buttonpane .lpb-btn--save').click();
-    cy.wait('@saveComponent').then((xhr) => {
+  cy.meCheckForAutoSave('.layout-paragraphs-component-form').then((result) => {
+    if (result.autoSave) {
+      // Auto-save scenario. Assume the form is saved when there is no me-ajaxing class present on the document body, then return the component.
+      cy.log('Auto-save enabled for this component form.');
+      cy
+        .get('.layout-paragraphs-component-form')
+        .should('have.class', 'me-autosave');
+      cy.get('body').should('not.have.class', 'me-ajaxing');
+      const uuid = result.$form.find('input[name="uuid"]').val();
+      cy
+        .iframe('#me-preview')
+        .find(`[data-uuid="${uuid}"]`, { timeout: 1000 })
+        .should('have.attr', 'data-active');
+      cy
+        .iframe('#me-preview')
+        .find(`[data-uuid="${uuid}"]`, { timeout: 1000 });
+    } else {
+      // Manual save scenario - click the save button
+      cy.intercept({
+        method: 'POST',
+        pathname: /^(\/[a-z-]*)?\/mercury-editor\/(.*)/,
+        times: 1
+      }).as('saveComponent');
+      cy.get('mercury-dialog[id^=lpb-dialog-] [slot=footer] .lpb-btn--save').click();
 
-      let selector = '';
+      // Wait for save to complete
+      cy.wait('@saveComponent', { timeout: 15000 }).then((xhr) => {
+        let selector = '';
 
-      // Check if there's an error in the form elements within the insert command
-      const errorCommand = xhr.response.body.find(command => command.command === 'insert' && Cypress.$(`<div>${command.data}</div>`).find('.form-element.error').length);
+        // Check if there's an error in the form elements
+        const errorCommand = xhr.response.body.find(command =>
+          command.command === 'insert' &&
+          Cypress.$(`<div>${command.data}</div>`).find('.form-element.error').length
+        );
 
-      if (errorCommand) {
-        selector = '.form-element.error';
-
-        cy.wait(500);
-        cy.get(selector, { timeout: 10000 });
-      }
-      else {
-        if (action === 'edit') {
-          selector = `[data-uuid="${subject}"]`;
+        if (errorCommand) {
+          selector = 'mercury-dialog[id^=lpb-dialog-] .layout-paragraphs-component-form .form-element.error';
+          cy.get(selector, { timeout: 10000 });
         } else {
-          const mercuryEditorCommand = xhr.response.body.find(command => command.command === 'mercuryEditorEditIframeCommandsWrapper');
+          // Find the newly added component
+          const mercuryEditorCommand = xhr.response.body.find(command =>
+            command.command === 'mercuryEditorEditIframeCommandsWrapper'
+          );
 
           if (mercuryEditorCommand) {
-            const insertCommandData = mercuryEditorCommand.commands?.find(command => command.command === 'insert');
+            const lpEventCommand = mercuryEditorCommand.commands?.find(command =>
+              command.command === 'LayoutParagraphsEventCommand'
+            );
 
-            if (insertCommandData) {
-              const affectedUuids = Cypress.$(`<div>${insertCommandData.data}</div>`)
-                .find('[data-uuid]')
-                .toArray()
-                .map(el => el.getAttribute('data-uuid'));
-
-              selector = affectedUuids
-                .filter(uuid => !uuids.includes(uuid))
-                .map(uuid => `[data-uuid="${uuid}"]`)
-                .join(', ');
+            if (lpEventCommand) {
+              const uuid = lpEventCommand.componentUuid;
+              selector = `[data-uuid="${uuid}"]`;
             }
           }
-        }
 
-        // Wait for DOM update and find the selector within the iframe
-        cy.wait(500);
-        cy.iframe('#me-preview').find(selector, { timeout: 10000 });
-      }
-    });
+          // Wait for DOM update and find the selector within the iframe
+          // cy.wait(100);
+          // If selector is empty, throw an error.
+          if (!selector) {
+            debugger;
+            console.warn('Unexpected xhr response:', xhr.response);
+            cy.log('Unexpected xhr response.');
+            cy.log(JSON.stringify(xhr.response));
+            // throw new Error('No new component found after save.');
+          }
+          cy.iframe('#me-preview').find(selector, { timeout: 10000 });
+        }
+      });
+
+    }
   });
 });
 
@@ -126,11 +244,35 @@ Cypress.Commands.add('meSaveComponent', () => {
  */
 Cypress.Commands.add('meSetCKEditor5Value', (fieldName, value) => {
   const selector = `.field--name-${fieldName.replace(/_/g, '-')}`;
-  cy.get(`${selector} .ck-content[contenteditable=true]`, {timeout: 10000}).then(el => {
-    const editor = el[0].ckeditorInstance;
-    editor.setData(value);
+  cy.get(`mercury-dialog[id^=lpb-dialog-] ${selector}`).then(($field) => {
+    const field = $field[0];
+    const form = field.closest('form');
+    cy.meCheckForAutoSave(form).then((result) => {
+      if (result.autoSave) {
+        cy.intercept({
+          method: 'POST',
+          pathname: /^(\/[a-z-]*)?\/mercury-editor\/(.*)/,
+          times: 1
+        }).as('autosave');
+      }
+      const editor = form.querySelector(`.ck-content[contenteditable=true]`).ckeditorInstance;
+      // Use model.change() to properly trigger change events
+      editor.model.change(writer => {
+        // Clear existing content
+        const root = editor.model.document.getRoot();
+        writer.remove(writer.createRangeIn(root));
+        // Insert new content using the data processor
+        const viewFragment = editor.data.processor.toView(value);
+        const modelFragment = editor.data.toModel(viewFragment);
+        writer.insert(modelFragment, root, 0);
+      });
+      if (result.autoSave) {
+        cy.wait('@autosave', { timeout: 15000 });
+        const uuid = form.querySelector('input[name="uuid"]').value;
+        cy.iframe('#me-preview').find(`[data-uuid="${uuid}"]`).contains(value, { timeout: 10000 });
+      }
+    });
   });
-  cy.wait(500);
 });
 
 /**
@@ -181,48 +323,74 @@ Cypress.Commands.add('meExitEditor', () => {
  *   index of the component to return.
  */
 Cypress.Commands.add('meFindComponent', (expression) => {
-  if (typeof expression === 'number') {
-    cy.get('#me-preview').its('0.contentDocument').then((document) => {
-      const component = Array.from(document.querySelectorAll('[data-uuid]'))[expression - 1];
-      cy.wrap(component);
-    });
-  }
-  else if (typeof expression === 'string') {
-    cy.get('#me-preview').its('0.contentDocument').then((document) => {
-      const component = Array.from(document.querySelectorAll('[data-uuid]')).filter(el => el.textContent.includes(expression)).pop();
-      cy.wrap(component);
-    });
-  }
+  cy.get('#me-preview').its('0.contentDocument').then((document) => {
+    const component = typeof expression === 'number' ?
+      Array.from(document.querySelectorAll('[data-uuid]'))[expression - 1] :
+      Array.from(document.querySelectorAll('[data-uuid]'))
+        .filter(el => el.textContent.includes(expression))
+        .pop();
+    cy.meSelectComponent(component.getAttribute('data-uuid'));
+  });
 });
 
 /**
- * Open the edit component dialog by clicking the edit button on an existing paragraph.
+ * Selects a component by its UUID, activating it if necessary.
+ * This will click the component to activate it, and wait for the edit form to load.
+ * If the component is already active, it will simply hover over it.
+ * This command will retry clicking the component up to 10 times if it is not active.
+ * @param {string} uuid The UUID of the component to select.
+ * @throws {Error} If the component cannot be activated after 10 attempts.
+ **/
+Cypress.Commands.add('meSelectComponent', (uuid) => {
+  cy.iframe('#me-preview').find(`[data-uuid="${uuid}"]`).then((component) => {
+    const clickUntilActive = (i = 0) => {
+      if (i > 10) {
+        throw new Error(`Failed to activate component with UUID: ${uuid}`);
+      }
+      cy.get(component).then(($el) => {
+        cy.intercept({
+          method: 'POST',
+          pathname: /^(\/[a-z-]*)?\/mercury-editor\/[a-f0-9]*\/edit/,
+          times: 1
+        }).as('loadEditForm').then(() => {
+          $el[0].dispatchEvent(new Event('mouseup', {
+            bubbles: true,
+            cancelable: true,
+          }));
+          cy.wait('@loadEditForm', { timeout: 10000 });
+          if ($el.attr('data-active') !== 'true') {
+            clickUntilActive(i + 1);
+          }
+        });;
+      });
+    };
+    if (component.attr('data-active') !== 'true') {
+      clickUntilActive();
+    }
+    cy.get(component).trigger('mouseover');
+  });
+});
+
+/**
+ * Delete a component by clicking on it and using the delete control.
  *
  * @param {string|alias} component
- *  The CSS selector or cypress alias for the component to edit.
- *
+ *  The CSS selector or cypress alias for the component to delete.
  */
-Cypress.Commands.add('meEditComponent', (component) => {
+Cypress.Commands.add('meDeleteComponent', (component) => {
   cy.intercept({
     method: 'POST',
     pathname: /^(\/[a-z-]*)?\/mercury-editor\/(.*)/,
     times: 1
-  }).as('openEditForm');
-  cy.get(component).find('.lpb-drag').focus();
-  cy.get(component).find('.lpb-edit').click();
-  cy.wait('@openEditForm');
-  cy.get('mercury-dialog[id^=lpb-dialog-]');
-});
+  }).as('confirmDelete');
 
-/**
- * Delete a component by clicking the delete button on an existing paragraph.
- *
- * @param {string|alias} component
- *  The CSS selector or cypress alias for the component to edit.
- */
-Cypress.Commands.add('meDeleteComponent', (component) => {
-  cy.get(component).find('.lpb-drag').first().focus();
-  cy.get(component).find('.lpb-delete').first().click();
-  cy.get('mercury-dialog[id^=lpb-dialog-]');
-  cy.get('.me-dialog__buttonpane .lpb-btn--confirm-delete').click();
+  // Click on component to focus it and reveal controls
+  cy.meSelectComponent(component.attr('data-uuid')).then(() => {
+    // Click the delete button that appears in the controls
+    cy.get(component).find('.lpb-delete').first().click({ force: true });
+    // Confirm deletion in dialog
+    cy.get('mercury-dialog[id^=lpb-dialog-] [slot="footer"] .lpb-btn--confirm-delete').click();
+    cy.wait('@confirmDelete');
+  });
+
 });

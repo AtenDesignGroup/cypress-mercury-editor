@@ -2,6 +2,19 @@
 
 This repository contains a set of [Cypress](https://www.cypress.io/) commands designed to interact with Drupal's [Mercury Editor](https://www.drupal.org/project/mercury_editor) module. These commands allow you to automate various tasks when working with the Mercury Editor, such as adding components, choosing layouts, editing content, and more.
 
+## Version Compatibility
+
+**Version 3.x** (for Mercury Editor 3.x and Layout Paragraphs 3.x):
+- Uses click-based interactions instead of hover
+- Auto-save functionality - forms are automatically saved when changed
+- New focused/blurred component states
+- Updated CSS selectors and DOM structure
+
+**Version 2.x** (for Mercury Editor 2.x and Layout Paragraphs 2.x):
+- Uses hover-based interactions
+- Manual save required via save button
+- Classic hover states for components
+
 ## Installation
 
 To use these Cypress commands in your project, follow these installation steps:
@@ -56,7 +69,9 @@ cy.meChooseLayout(layoutId);
 
 ### `meSaveComponent`
 
-Clicks the save button on an open add or edit component dialog.
+Saves the component form. Automatically handles both scenarios:
+- **New components**: Clicks the save button to add the component to the page
+- **Existing components**: Waits for auto-save to complete when editing
 
 ```javascript
 cy.meSaveComponent();
@@ -107,23 +122,23 @@ cy.meExitEditor();
 
 ### `meFindComponent`
 
-Finds a component that contains the given text.
+Finds a component that contains the given text or returns a component by its numeric index.
 
 ```javascript
-cy.meFindComponent(text);
+cy.meFindComponent(expression);
 ```
 
-- `text` (string): The text to search for within the component.
+- `expression` (string|number): Either the text to search for within the component or the numeric index of the component to return (1-based).
 
-### `meEditComponent`
+### `meSelectComponent`
 
-Opens the edit component dialog by clicking the edit button on an existing paragraph.
+Selects a component by its UUID, activating it if necessary. This will click the component to activate it and wait for the edit form to load. If the component is already active, it will simply hover over it.
 
 ```javascript
-cy.meEditComponent(component);
+cy.meSelectComponent(uuid);
 ```
 
-- `component` (string or alias): The CSS selector or Cypress alias for the component to edit.
+- `uuid` (string): The UUID of the component to select.
 
 ### `meDeleteComponent`
 
@@ -134,6 +149,39 @@ cy.meDeleteComponent(component);
 ```
 
 - `component` (string or alias): The CSS selector or Cypress alias for the component to delete.
+
+### `meCheckForAutoSave` (Internal)
+
+An internal helper command that checks if a given form has auto-save enabled. This command is used internally by other commands and typically doesn't need to be called directly in tests.
+
+```javascript
+cy.meCheckForAutoSave(form);
+```
+
+- `form` (string): The CSS selector for the form to check.
+
+Returns a promise that resolves with an object containing:
+- `autoSave`: boolean indicating if auto-save is enabled
+- `data`: the serialized data if auto-save is enabled, otherwise null
+- `$form`: the jQuery object of the form
+
+## Version 3.x Changes Summary
+
+For Mercury Editor 3.x and Layout Paragraphs 3.x, several key behavioral changes have been implemented:
+
+1. **Click-based Interactions**: Components are now activated by clicking instead of hovering
+2. **Updated CSS Classes**: Component forms now use `.layout-paragraphs-component-form` class for Layout Paragraphs components
+3. **Smart Save Handling**: The `meSaveComponent` command now intelligently handles both manual save (new components) and auto-save (existing components) scenarios
+4. **Component States**: Components now use `.focused` and `.blurred` classes instead of hover states
+5. **DOM Updates**: Updated CSS selectors and form element locations
+
+**Important**: Mercury Editor uses two different form types:
+- `.me-entity-form` - for editing the main entity/page
+- `.layout-paragraphs-component-form` - for editing individual Layout Paragraphs components (which is what Mercury Editor primarily handles)
+
+The Cypress commands in this package target `.layout-paragraphs-component-form` since they're designed for component editing workflows.
+
+These changes make the interface more touch-friendly and provide a smoother editing experience.
 
 ## Usage
 
@@ -180,7 +228,6 @@ it('creates, edits, and deletes a node with Mercury Editor', () => {
 
     cy.meEditPage();
     cy.meFindComponent('Left').then((component) => {
-      cy.meEditComponent(component);
       cy.meSetCKEditor5Value('me_test_text', 'Left - edited');
       cy.meSaveComponent().then((component) => {
         cy.wrap(component).should('contain', 'Left - edited');
@@ -188,7 +235,6 @@ it('creates, edits, and deletes a node with Mercury Editor', () => {
     });
 
     cy.meFindComponent('Right').then((component) => {
-      cy.meEditComponent(component);
       cy.meSetCKEditor5Value('me_test_text', 'Right - edited');
       cy.meSaveComponent().then((component) => {
         cy.wrap(component).should('contain', 'Right - edited');
