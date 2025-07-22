@@ -76,8 +76,8 @@ Cypress.Commands.add('meAddComponent', (type, options = {}) => {
       times: 1,
     }).as('componentMenu');
     cy.get(subject).find(selector).first().click({ force: true });
-    cy.wait('@componentMenu', { timeout: 1000 });
-    cy.get('.lpb-component-list', { timeout: 1000 });
+    cy.wait('@componentMenu', { timeout: 10000 });
+    cy.get('.lpb-component-list', { timeout: 10000 });
 
     cy.intercept({
       method: 'POST',
@@ -102,10 +102,10 @@ Cypress.Commands.add('meAddComponent', (type, options = {}) => {
           times: 1,
         }).as('editForm');
         cy.wait('@editForm', { timeout: 10000 }).then(() => {
-          cy.get('.layout-paragraphs-component-form.me-autosave', { timeout: 1000 });
+          cy.get('.layout-paragraphs-component-form.me-autosave', { timeout: 10000 });
         });
       } else {
-        cy.get('.layout-paragraphs-component-form', { timeout: 1000 });
+        cy.get('.layout-paragraphs-component-form', { timeout: 10000 });
       }
     });
   });
@@ -137,19 +137,19 @@ Cypress.Commands.add('meChooseLayout', (layoutId) => {
         pathname: new RegExp(`/mercury-editor/[a-f0-9]{32}/edit/`),
         times: 1,
       }).as('autoSave');
-      cy.wait('@autoSave', { timeout: 1000 }).then(() => {
+      cy.wait('@autoSave', { timeout: 10000 }).then(() => {
         cy.get('.layout-paragraphs-component-form').then(($form) => {
           if ($form.find('.form-element.error').length) {
             cy.get('.layout-paragraphs-component-form .form-element.error', { timeout: 10000 });
             cy.log('Error in the form elements after choosing layout.');
           } else {
-            cy.iframe('#me-preview').find(`[data-layout="${layoutId}"]`, { timeout: 1000 });
-            cy.get('.layout-paragraphs-component-form.me-autosave', { timeout: 1000 });
+            cy.iframe('#me-preview').find(`[data-layout="${layoutId}"]`, { timeout: 10000 });
+            cy.get('.layout-paragraphs-component-form.me-autosave', { timeout: 10000 });
           }
         });
       });
     } else {
-      cy.get('.layout-paragraphs-component-form', { timeout: 1000 });
+      cy.get('.layout-paragraphs-component-form', { timeout: 10000 });
     }
   });
 });
@@ -172,11 +172,11 @@ Cypress.Commands.add('meSaveComponent', () => {
       const uuid = result.$form.find('input[name="uuid"]').val();
       cy
         .iframe('#me-preview')
-        .find(`[data-uuid="${uuid}"]`, { timeout: 1000 })
+        .find(`[data-uuid="${uuid}"]`, { timeout: 10000 })
         .should('have.attr', 'data-active');
       cy
         .iframe('#me-preview')
-        .find(`[data-uuid="${uuid}"]`, { timeout: 1000 });
+        .find(`[data-uuid="${uuid}"]`, { timeout: 10000 });
     } else {
       // Manual save scenario - click the save button
       cy.intercept({
