@@ -304,7 +304,12 @@ Cypress.Commands.add('meSavePage', () => {
  */
 Cypress.Commands.add('meDeletePage', () => {
   cy.get('a').contains('Delete').click();
-  cy.contains('.button--primary:visible', 'Delete').click();
+  cy.get('form.confirmation');
+  cy
+    .get('form.confirmation')
+    .find('.button--primary:visible')
+    .as('deleteButton');
+  cy.get('@deleteButton').click();
 });
 
 /**
