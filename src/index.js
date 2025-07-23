@@ -304,7 +304,7 @@ Cypress.Commands.add('meSavePage', () => {
  */
 Cypress.Commands.add('meDeletePage', () => {
   cy.get('a').contains('Delete').click();
-  cy.get('.button--primary:visible').contains('Delete').click();
+  cy.contains('.button--primary:visible', 'Delete').click();
 });
 
 /**
@@ -368,6 +368,9 @@ Cypress.Commands.add('meSelectComponent', (uuid) => {
       clickUntilActive();
     }
     cy.get(component).trigger('mouseover');
+    cy.get(component).as('selectedComponent');
+    cy.get('@selectedComponent').should('have.attr', 'data-active', 'true');
+    cy.get('@selectedComponent').trigger('mouseover', { force: true });
   });
 });
 
