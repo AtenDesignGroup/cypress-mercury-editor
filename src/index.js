@@ -304,10 +304,10 @@ Cypress.Commands.add('meSavePage', () => {
  */
 Cypress.Commands.add('meDeletePage', () => {
   cy.get('a').contains('Delete').click();
-  cy.get('form.confirmation');
+  cy.get('form.confirmation').should('exist'); // Wait for it to appear
   cy
     .get('form.confirmation')
-    .find('.button--primary:visible')
+    .find('input.button--primary:visible')
     .as('deleteButton');
   cy.get('@deleteButton').click();
 });
@@ -391,7 +391,6 @@ Cypress.Commands.add('meDeleteComponent', (component) => {
     pathname: /^(\/[a-z-]*)?\/mercury-editor\/(.*)/,
     times: 1
   }).as('confirmDelete');
-
   // Click on component to focus it and reveal controls
   cy.meSelectComponent(component.attr('data-uuid')).then(() => {
     // Click the delete button that appears in the controls
@@ -399,6 +398,8 @@ Cypress.Commands.add('meDeleteComponent', (component) => {
     // Confirm deletion in dialog
     cy.get('mercury-dialog[id^=lpb-dialog-] [slot="footer"] .lpb-btn--confirm-delete').click();
     cy.wait('@confirmDelete');
+    // Wait until the component is removed from the DOM
+    cy.iframe('#me-preview').find(`[data-uuid="${component.attr('data-uuid')}"]`).should('not.exist');
   });
 
 });
