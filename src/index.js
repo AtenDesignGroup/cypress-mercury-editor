@@ -84,7 +84,7 @@ Cypress.Commands.add('meAddComponent', (type, options = {}) => {
       pathname: new RegExp(`/mercury-editor/[a-f0-9]{32}/insert/${type}(\\?|$)`),
       times: 1,
     }).as('addComponent');
-    cy.get(`.type-${type} a`).click();
+    cy.get(`.type-${type} a`).click({ force: true });
 
     // Wait for the add component request to finish.
     // This will result in either:
