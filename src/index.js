@@ -370,6 +370,7 @@ Cypress.Commands.add('meSelectComponent', (uuid) => {
     if (component.attr('data-active') !== 'true') {
       clickUntilActive();
     }
+    cy.get(`[name="uuid"][value="${uuid}"]`, { timeout: 10000 }).should('exist');
     cy.get(component).trigger('mouseover');
     cy.get(component).as('selectedComponent');
     cy.get('@selectedComponent').should('have.attr', 'data-active', 'true');
