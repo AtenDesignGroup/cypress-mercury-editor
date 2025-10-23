@@ -188,7 +188,6 @@ Cypress.Commands.add('meSaveComponent', () => {
 
       // Wait for save to complete
       cy.wait('@saveComponent', { timeout: 15000 }).then((xhr) => {
-        let selector = '';
 
         // Check if there's an error in the form elements
         const errorCommand = xhr.response.body.find(command =>
@@ -197,36 +196,35 @@ Cypress.Commands.add('meSaveComponent', () => {
         );
 
         if (errorCommand) {
-          selector = 'mercury-dialog[id^=lpb-dialog-] .layout-paragraphs-component-form .form-element.error';
-          cy.get(selector, { timeout: 10000 });
+          cy.get(
+            'mercury-dialog[id^=lpb-dialog-] .layout-paragraphs-component-form .form-element.error',
+            { timeout: 10000 },
+          );
         } else {
           // Find the newly added component
           const mercuryEditorCommand = xhr.response.body.find(command =>
             command.command === 'mercuryEditorEditIframeCommandsWrapper'
           );
-
-          if (mercuryEditorCommand) {
-            const lpEventCommand = mercuryEditorCommand.commands?.find(command =>
-              command.command === 'LayoutParagraphsEventCommand'
-            );
-
-            if (lpEventCommand) {
-              const uuid = lpEventCommand.componentUuid;
-              selector = `[data-uuid="${uuid}"]`;
-            }
+          if (!mercuryEditorCommand) {
+            throw new Error('Response did not contain mercuryEditorEditIframeCommandsWrapper command.');
           }
 
-          // Wait for DOM update and find the selector within the iframe
-          // cy.wait(100);
-          // If selector is empty, throw an error.
-          if (!selector) {
-            debugger;
-            console.warn('Unexpected xhr response:', xhr.response);
-            cy.log('Unexpected xhr response.');
-            cy.log(JSON.stringify(xhr.response));
-            // throw new Error('No new component found after save.');
+          const lpEventCommand = mercuryEditorCommand.commands?.find(command =>
+            command.command === 'LayoutParagraphsEventCommand'
+          );
+          if (!lpEventCommand) {
+            throw new Error('Response did not contain LayoutParagraphsEventCommand command.');
           }
-          cy.iframe('#me-preview').find(selector, { timeout: 10000 });
+
+          const uuid = lpEventCommand.componentUuid;
+          if (!uuid) {
+            throw new Error('LayoutParagraphsEventCommand did not contain componentUuid.');
+          }
+
+          // The saved component's edit form should be open in tray.
+          cy.get(`[name="uuid"][value="${uuid}"]`, { timeout: 10000 });
+          // Find the component in the preview iframe.
+          cy.iframe('#me-preview').find(`[data-uuid="${uuid}"][data-active="true"]`, { timeout: 10000 });
         }
       });
 
