@@ -291,9 +291,11 @@ Cypress.Commands.add('meSavePage', () => {
     times: 1
   }).as('savePage');
   cy.get('#me-save-btn').click();
+  // Button should say "Saved!" while in progress.
+  cy.get('#me-save-btn').should('contain.text', 'Saved!');
   cy.wait('@savePage');
-  // Give the DOM a moment to update.
-  cy.wait(200);
+  // Button should revert to "Save changes" after save.
+  cy.get('#me-save-btn').should('contain.text', 'Save changes');
 });
 
 /**
