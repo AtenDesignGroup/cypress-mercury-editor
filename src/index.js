@@ -303,7 +303,7 @@ Cypress.Commands.add('meSavePage', () => {
  * This will open a confirmation dialog, and then delete the entity.
  */
 Cypress.Commands.add('meDeletePage', () => {
-  cy.get('a').contains('Delete').click();
+  cy.get('a.tabs__link').contains('Delete').click();
   cy.get('form.confirmation').should('exist'); // Wait for it to appear
   cy
     .get('form.confirmation')
