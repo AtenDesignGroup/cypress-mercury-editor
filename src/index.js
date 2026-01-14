@@ -288,7 +288,10 @@ Cypress.Commands.add('meSetCKEditor5Value', (fieldName, value) => {
  * Visit the Mercury Editor interface by clicking the "Edit" link on a entity view page.
  */
 Cypress.Commands.add('meEditPage', () => {
-  cy.get('.tabs--primary a').contains('Edit').click();
+  cy.get('.tabs--primary a').contains('Edit').then(($link) => {
+    const editUrl = $link.attr('href');
+    cy.visit(editUrl);
+  });
   cy.get('#me-preview').its('0.contentDocument');
 });
 
@@ -314,7 +317,10 @@ Cypress.Commands.add('meSavePage', () => {
  * This will open a confirmation dialog, and then delete the entity.
  */
 Cypress.Commands.add('meDeletePage', () => {
-  cy.get('a.tabs__link').contains('Delete').click();
+  cy.get('a.tabs__link').contains('Delete').then(($link) => {
+    const deleteUrl = $link.attr('href');
+    cy.visit(deleteUrl);
+  });
   cy.get('form.confirmation').should('exist'); // Wait for it to appear
   cy
     .get('form.confirmation')
