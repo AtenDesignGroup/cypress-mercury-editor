@@ -72,7 +72,7 @@ Cypress.Commands.add('meAddComponent', (type, options = {}) => {
 
     cy.intercept({
       method: 'POST',
-      pathname: new RegExp(`/mercury-editor/[a-f0-9]{32}/choose-component`),
+      url: /\/mercury-editor\/[a-f0-9]{32}\/choose-component|\/mercury-editor\/[a-f0-9-]+\/[a-f0-9-]+\/action\/insert/,
       times: 1,
     }).as('componentMenu');
     cy.get(subject).find(selector).first().click({ force: true });
@@ -102,7 +102,7 @@ Cypress.Commands.add('meAddComponent', (type, options = {}) => {
           times: 1,
         }).as('editForm');
         cy.wait('@editForm', { timeout: 10000 }).then(() => {
-          cy.get('.layout-paragraphs-component-form.me-autosave', { timeout: 10000 });
+          cy.get('.layout-paragraphs-component-form.me-autosave-form', { timeout: 10000 });
         });
       } else {
         cy.get('.layout-paragraphs-component-form', { timeout: 10000 });
@@ -119,7 +119,7 @@ Cypress.Commands.add('meAddComponent', (type, options = {}) => {
  */
 Cypress.Commands.add('meChooseLayout', (layoutId) => {
   cy.get('.layout-paragraphs-component-form').then(($form) => {
-    const autoSave = $form.hasClass('me-autosave');
+    const autoSave = $form.hasClass('me-autosave-form');
     cy.intercept({
       method: 'POST',
       pathname: /^(\/[a-z-]*)?\/mercury-editor\/(.*)/,
@@ -144,7 +144,7 @@ Cypress.Commands.add('meChooseLayout', (layoutId) => {
             cy.log('Error in the form elements after choosing layout.');
           } else {
             cy.iframe('#me-preview').find(`[data-layout="${layoutId}"]`, { timeout: 10000 });
-            cy.get('.layout-paragraphs-component-form.me-autosave', { timeout: 10000 });
+            cy.get('.layout-paragraphs-component-form.me-autosave-form', { timeout: 10000 });
           }
         });
       });
@@ -160,6 +160,7 @@ Cypress.Commands.add('meChooseLayout', (layoutId) => {
  * 1. Auto-save forms (existing components) - waits for auto-save to complete
  * 2. Manual save forms (new components) - clicks the save button
  */
+
 Cypress.Commands.add('meSaveComponent', () => {
   cy.meCheckForAutoSave('.layout-paragraphs-component-form').then((result) => {
     if (result.autoSave) {
@@ -167,7 +168,7 @@ Cypress.Commands.add('meSaveComponent', () => {
       cy.log('Auto-save enabled for this component form.');
       cy
         .get('.layout-paragraphs-component-form')
-        .should('have.class', 'me-autosave');
+        .should('have.class', 'me-autosave-form');
       cy.get('body').should('not.have.class', 'me-ajaxing');
       const uuid = result.$form.find('input[name="uuid"]').val();
       cy
@@ -185,7 +186,6 @@ Cypress.Commands.add('meSaveComponent', () => {
         times: 1
       }).as('saveComponent');
       cy.get('mercury-dialog[id^=lpb-dialog-] [slot=footer] .lpb-btn--save').click();
-
       // Wait for save to complete
       cy.wait('@saveComponent', { timeout: 15000 }).then((xhr) => {
 
@@ -213,7 +213,18 @@ Cypress.Commands.add('meSaveComponent', () => {
             command.command === 'LayoutParagraphsEventCommand'
           );
           if (!lpEventCommand) {
-            throw new Error('Response did not contain LayoutParagraphsEventCommand command.');
+            const keys = Object.keys(mercuryEditorCommand.commands || {}).join(', ');
+            const commands = mercuryEditorCommand.commands?.reduce((acc, cmd) => {
+              acc.push(cmd.command);
+              return acc;
+            }, []).join(', ');
+            const data = mercuryEditorCommand.commands?.reduce((acc, cmd) => {
+              acc.push(cmd.data);
+              return acc;
+            }, []).join(', ');
+            throw new Error(
+              `Response did not contain LayoutParagraphsEventCommand command. Found data: ${data}`
+            );
           }
 
           const uuid = lpEventCommand.componentUuid;
@@ -291,9 +302,9 @@ Cypress.Commands.add('meSavePage', () => {
     times: 1
   }).as('savePage');
   cy.get('#me-save-btn').click();
+  cy.wait('@savePage');
   // Button should say "Saved!" while in progress.
   cy.get('#me-save-btn').should('contain.text', 'Saved!');
-  cy.wait('@savePage');
   // Button should revert to "Save changes" after save.
   cy.get('#me-save-btn').should('contain.text', 'Save changes');
 });
@@ -355,8 +366,8 @@ Cypress.Commands.add('meSelectComponent', (uuid) => {
       cy.get(component).then(($el) => {
         cy.intercept({
           method: 'POST',
-          pathname: /^(\/[a-z-]*)?\/mercury-editor\/[a-f0-9]*\/edit/,
-          times: 1
+          url: /\/mercury-editor\/[a-f0-9]*\/edit|\/mercury-editor\/[a-f0-9-]+\/[a-f0-9-]+\/action\/edit/,
+          times: 1,
         }).as('loadEditForm').then(() => {
           $el[0].dispatchEvent(new Event('mouseup', {
             bubbles: true,
