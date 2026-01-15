@@ -379,10 +379,15 @@ Cypress.Commands.add('meSelectComponent', (uuid) => {
             bubbles: true,
             cancelable: true,
           }));
-          cy.wait('@loadEditForm', { timeout: 10000 });
-          if ($el.attr('data-active') !== 'true') {
-            clickUntilActive(i + 1);
-          }
+          cy.wait('@loadEditForm');
+          // Get the UUID of the currently active component (which may be a parent)
+          cy.iframe('#me-preview').find('[data-active="true"]').then(($activeComponent) => {
+            const activeUuid = $activeComponent.attr('data-uuid');
+            cy.get(`.layout-paragraphs-component-form [name="uuid"][value="${activeUuid}"]`);
+            if (activeUuid !== uuid) {
+              clickUntilActive(i + 1);
+            }
+          });
         });;
       });
     };
