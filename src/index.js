@@ -1,5 +1,16 @@
 import 'cypress-iframe';
 
+const meGetEntityBasePath = () => {
+  return cy.location('pathname').then((pathname) => {
+    const normalizedPath = pathname.replace(/\/+$/, '');
+
+    return normalizedPath.replace(
+      /\/(edit|delete|revisions)(?:\/.*)?$/,
+      '',
+    );
+  });
+};
+
 /**
  * Checks if the given form has auto-save enabled.
  * Returns a promise that resolves with an object containing:
@@ -84,6 +95,7 @@ Cypress.Commands.add('meAddComponent', (type, options = {}) => {
       pathname: new RegExp(`/mercury-editor/[a-f0-9]{32}/insert/${type}(\\?|$)`),
       times: 1,
     }).as('addComponent');
+    // cy.get(`.type-${type} a`).scrollIntoView().should('be.visible');
     cy.get(`.type-${type} a`).click({ force: true });
 
     // Wait for the add component request to finish.
@@ -285,14 +297,13 @@ Cypress.Commands.add('meSetCKEditor5Value', (fieldName, value) => {
 });
 
 /**
- * Visit the Mercury Editor interface by clicking the "Edit" link on a entity view page.
+ * Visit the Mercury Editor interface using the entity edit URL.
  */
 Cypress.Commands.add('meEditPage', () => {
-  cy.get('.tabs--primary a').contains('Edit').then(($link) => {
-    const editUrl = $link.attr('href');
-    cy.visit(editUrl);
+  meGetEntityBasePath().then((entityPath) => {
+    cy.visit(`${entityPath}/edit`);
+    cy.get('#me-preview').its('0.contentDocument');
   });
-  cy.get('#me-preview').its('0.contentDocument');
 });
 
 /**
@@ -313,13 +324,12 @@ Cypress.Commands.add('meSavePage', () => {
 });
 
 /**
- * Deletes the entity by clicking the `Delete` button in the Mercury Editor interface.
+ * Deletes the entity using the entity delete URL.
  * This will open a confirmation dialog, and then delete the entity.
  */
 Cypress.Commands.add('meDeletePage', () => {
-  cy.get('a.tabs__link').contains('Delete').then(($link) => {
-    const deleteUrl = $link.attr('href');
-    cy.visit(deleteUrl);
+  meGetEntityBasePath().then((entityPath) => {
+    cy.visit(`${entityPath}/delete`);
   });
   cy.get('form.confirmation').should('exist'); // Wait for it to appear
   cy
