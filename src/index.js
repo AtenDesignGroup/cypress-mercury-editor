@@ -374,76 +374,63 @@ Cypress.Commands.add('meFindComponent', (expression) => {
  * @throws {Error} If the component cannot be activated after 10 attempts.
  **/
 Cypress.Commands.add('meSelectComponent', (uuid) => {
+  const iframe = '#me-preview';
   const selector = `[data-uuid="${uuid}"]`;
+  const clickingClass = 'me-select-component-clicking';
 
-  cy.iframe('#me-preview').find(selector).then(($component) => {
-    if ($component.attr('data-active') === 'true') {
-      return;
+  const clickUntilActive = (attempt = 0) => {
+    if (attempt > 10) {
+      throw new Error(`Failed to activate component with UUID: ${uuid}`);
     }
 
-    const body = $component[0].ownerDocument.body;
-
-    const clickEventListener = () => {
-      document.body.classList.remove('me-select-component-clicking');
-    };
-
-    body.addEventListener(
-      'lpb-component:focus',
-      clickEventListener,
-      { once: true },
-    );
-
-    const clickUntilActive = (i = 0) => {
-      if (i > 10) {
-        throw new Error(`Failed to activate component with UUID: ${uuid}`);
+    // Re-query each time in case morphdom replaced the element.
+    cy.iframe(iframe).find(selector).then(($component) => {
+      if ($component.attr('data-active') === 'true') {
+        return;
       }
 
-      // Re-query each time in case morphdom replaced the element.
-      cy.iframe('#me-preview').find(selector).then(($el) => {
-        if ($el.attr('data-active') === 'true') {
-          return;
-        }
+      const body = $component[0].ownerDocument.body;
 
-        cy.iframe('#me-preview').then(($body) => {
-          $body.addClass('me-select-component-clicking');
-          $el[0].dispatchEvent(new MouseEvent('mouseup', {
-            bubbles: true,
-            cancelable: true,
-          }));
+      body.classList.add(clickingClass);
+      body.addEventListener(
+        'lpb-component:focus',
+        () => body.classList.remove(clickingClass),
+        { once: true },
+      );
+
+      $component[0].dispatchEvent(new MouseEvent('mouseup', {
+        bubbles: true,
+        cancelable: true,
+      }));
+
+      cy.iframe(iframe)
+        .should('not.have.class', clickingClass)
+        .find('[data-active="true"]')
+        .then(($activeComponent) => {
+          const activeUuid = $activeComponent.attr('data-uuid');
+
+          cy.get(
+            `.layout-paragraphs-component-form [name="uuid"][value="${activeUuid}"]`,
+          ).should('exist');
+
+          if (activeUuid !== uuid) {
+            clickUntilActive(attempt + 1);
+          }
         });
+    });
+  };
 
-        cy.get('body')
-          .should('not.have.class', 'me-select-component-clicking');
-
-        cy.iframe('#me-preview')
-          .find('[data-active="true"]')
-          .then(($activeComponent) => {
-            const activeUuid = $activeComponent.attr('data-uuid');
-
-            cy.get(
-              `.layout-paragraphs-component-form [name="uuid"][value="${activeUuid}"]`,
-            ).should('exist');
-
-            if (activeUuid !== uuid) {
-              clickUntilActive(i + 1);
-            }
-          });
-      });
-    };
-
-    clickUntilActive();
-  });
+  clickUntilActive();
 
   cy.get(`[name="uuid"][value="${uuid}"]`, { timeout: 10000 })
     .should('exist');
 
-  cy.iframe('#me-preview')
-    .find(`[data-uuid="${uuid}"]`)
+  cy.iframe(iframe)
+    .find(selector)
     .should('have.attr', 'data-active', 'true')
     .trigger('mouseover', { force: true })
     .as('selectedComponent');
-
-  });
+});
 
 /**
  * Delete a component by clicking on it and using the delete control.
