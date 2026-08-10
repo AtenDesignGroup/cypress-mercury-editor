@@ -406,12 +406,11 @@ Cypress.Commands.add('meSelectComponent', (uuid) => {
 
         cy.iframe('#me-preview').then(($body) => {
           $body.addClass('me-select-component-clicking');
+          $el[0].dispatchEvent(new MouseEvent('mouseup', {
+            bubbles: true,
+            cancelable: true,
+          }));
         });
-
-        $el[0].dispatchEvent(new MouseEvent('mouseup', {
-          bubbles: true,
-          cancelable: true,
-        }));
 
         cy.get('body')
           .should('not.have.class', 'me-select-component-clicking');
