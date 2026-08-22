@@ -235,7 +235,9 @@ Cypress.Commands.add('meSaveComponent', () => {
           // The saved component's edit form should be open in tray.
           cy.get(`[name="uuid"][value="${uuid}"]`, { timeout: 10000 });
           // Find the component in the preview iframe.
-          cy.iframe('#me-preview').find(`[data-uuid="${uuid}"][data-active="true"]`, { timeout: 10000 });
+          cy.iframe('#me-preview')
+            .find(`.js-lpb-component[data-uuid="${uuid}"]`, { timeout: 10000 })
+            .should('have.attr', 'data-active', 'true');
         }
       });
 
