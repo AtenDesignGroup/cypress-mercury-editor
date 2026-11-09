@@ -317,6 +317,8 @@ Cypress.Commands.add('meSavePage', () => {
     pathname: /^(\/[a-z-]*)?\/mercury-editor\/(.*)/,
     times: 1
   }).as('savePage');
+  // Assert body does not contain me-ajax-busy class before continuing.
+  cy.get('body').should('not.have.class', 'me-ajax-busy');
   cy.get('#me-save-btn').click();
   cy.wait('@savePage');
   // Button should say "Saved!" while in progress.
