@@ -312,20 +312,24 @@ Cypress.Commands.add('meEditPage', () => {
  * Saves the entity by clicking the `Save` button in the Mercury Editor interface.
  */
 Cypress.Commands.add('meSavePage', () => {
+  cy.get('body').should('not.have.class', 'me-ajax-busy');
   cy.intercept({
     method: 'POST',
     pathname: /^(\/[a-z-]*)?\/mercury-editor\/(.*)/,
-    times: 1
+    times: 1,
   }).as('savePage');
-  // Assert body does not contain me-ajax-busy class before continuing.
+  cy.get('#me-save-btn').should('be.enabled').click();
+  cy.wait('@savePage').then(({ response }) => {
+    expect(response.statusCode).to.equal(200);
+    expect(response.body.some(
+      (command) => command.command === 'mercuryEditorSaveSuccess',
+    )).to.equal(true);
+  });
   cy.get('body').should('not.have.class', 'me-ajax-busy');
-  cy.get('#me-save-btn').should('be.enabled');
-  cy.get('#me-save-btn').click();
-  cy.wait('@savePage');
-  // Button should say "Saved!" while in progress.
-  cy.get('#me-save-btn').should('contain.text', 'Saved!');
-  // Button should revert to "Save changes" after save.
-  cy.get('#me-save-btn').should('contain.text', 'Save changes');
+  cy.get('#me-save-btn')
+    .should('be.enabled')
+    .and('not.have.class', 'me-button--saved')
+    .and('have.text', 'Save changes');
 });
 
 /**
