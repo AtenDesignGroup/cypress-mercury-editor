@@ -1,4 +1,5 @@
 import 'cypress-iframe';
+import { isSaveRequest } from './save-request.mjs';
 
 const meGetEntityBasePath = () => {
   return cy.location('pathname').then((pathname) => {
@@ -315,9 +316,12 @@ Cypress.Commands.add('meSavePage', () => {
   cy.get('body').should('not.have.class', 'me-ajax-busy');
   cy.intercept({
     method: 'POST',
-    pathname: /^(\/[a-z-]*)?\/mercury-editor\/(.*)/,
-    times: 1,
-  }).as('savePage');
+    pathname: /\/mercury-editor\/[^/]+$/,
+  }, async (request) => {
+    if (await isSaveRequest(request)) {
+      request.alias = 'savePage';
+    }
+  });
   cy.get('#me-save-btn').should('be.enabled').click();
   cy.wait('@savePage').then(({ response }) => {
     expect(response.statusCode).to.equal(200);
