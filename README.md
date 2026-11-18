@@ -98,7 +98,9 @@ cy.meEditPage();
 
 ### `meSavePage`
 
-Saves the entity by clicking the "Save" button in the Mercury Editor interface.
+Waits for the Mercury Editor save button to be enabled and for any previous
+save confirmation to clear, then clicks it and checks for the `me-button--saved`
+class. The check does not depend on the button label or language.
 
 ```javascript
 cy.meSavePage();

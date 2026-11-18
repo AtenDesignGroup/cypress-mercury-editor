@@ -1,5 +1,4 @@
 import 'cypress-iframe';
-import { isSaveRequest } from './save-request.mjs';
 
 const meGetEntityBasePath = () => {
   return cy.location('pathname').then((pathname) => {
@@ -313,27 +312,19 @@ Cypress.Commands.add('meEditPage', () => {
  * Saves the entity by clicking the `Save` button in the Mercury Editor interface.
  */
 Cypress.Commands.add('meSavePage', () => {
-  cy.get('body').should('not.have.class', 'me-ajax-busy');
-  cy.intercept({
-    method: 'POST',
-    pathname: /\/mercury-editor\/[^/]+$/,
-  }, async (request) => {
-    if (await isSaveRequest(request)) {
-      request.alias = 'savePage';
-    }
-  });
-  cy.get('#me-save-btn').should('be.enabled').click();
-  cy.wait('@savePage').then(({ response }) => {
-    expect(response.statusCode).to.equal(200);
-    expect(response.body.some(
-      (command) => command.command === 'mercuryEditorSaveSuccess',
-    )).to.equal(true);
-  });
-  cy.get('body').should('not.have.class', 'me-ajax-busy');
+  // The editor can ignore save clicks while AJAX is in progress.
+  cy.get('body')
+    .should('not.have.class', 'me-ajax-busy')
+    .and('not.have.class', 'me-ajaxing');
   cy.get('#me-save-btn')
     .should('be.enabled')
     .and('not.have.class', 'me-button--saved')
-    .and('have.text', 'Save changes');
+    .click();
+
+  cy.get('#me-save-btn', { timeout: Cypress.config('responseTimeout') })
+    .should('have.class', 'me-button--saved');
+  cy.get('body').should('not.have.class', 'me-ajax-busy');
+  cy.get('#me-save-btn').should('be.enabled');
 });
 
 /**
